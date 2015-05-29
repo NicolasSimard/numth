@@ -3,12 +3,9 @@
 This module defines quadratic fields (QuadraticRat class), quadratic integers
 (QuadraticInt class), quadratic integral ideals (QuadraticIntId class) and 
 quadratic forms.
-
-To import the module, simply enter the following line in the console:
->>> from numth import quadratic
 """
 
-from numth import rat, gcd
+import rat, gcd
 from math import sqrt
 from time import time
 
