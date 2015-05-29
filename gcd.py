@@ -30,6 +30,7 @@ def _intern_gcd(m,n):
     
 if __name__ == "__main__":
     import doctest
-    doctest.testmod()
+    doctest.testmod() 
     import sys
-    print(gcd(*list(map(int,sys.argv[1:]))))
+    if len(sys.argv)  > 1:
+        print(gcd(*list(map(int,sys.argv[1:]))))
