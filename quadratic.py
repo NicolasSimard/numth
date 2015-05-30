@@ -305,12 +305,31 @@ class QuadraticOrder:
         return QuadraticOrder(self.D,self.a,-self.b)
 
     def norm(self):
+        """Compute the norm of the element.
+        
+        The norm of an element x in a quadratic field is defined x*sigma(x),
+        where sigma is the non-trivial automorphism of the field.
+        
+        Examples:
+        >>> x = QuadraticOrder(125,3,5)
+        >>> x.norm() == (x*x.conj()).a # Recall that x*x.conj() = a + b*w
+        True
+        """
+        
         if self.D % 4 == 1:
             return (self.a*self.a + self.a*self.b 
                     + self.b*self.b*(1 - self.D)//4)
         return self.a*self.a - self.D//4*self.b*self.b
 
     def __pow__(self, n):
+        """Compute the positive powers of the element.
+        
+        Examples:
+        >>> w = QuadraticOrder(-3,0,1)
+        >>> w**6
+        1
+        """
+        
         if n==0:
             return QuadraticOrder(self.D,1,0)
         elif n == 1: # Adding this line saves a bit of time
@@ -430,12 +449,14 @@ class QuadraticIntId:
 
     def __repr__(self):
         basis = self.integral_basis()
-        return "[" + basis[0].__str__() + "," + basis[1].__str__() + "]"
+        return "[" + basis[0].__str__() + ", " + basis[1].__str__() + "]"
 
 
 # DEVEL: Implement composition.
 
-# TODO: implement the corresponding ideal function.
+# TODO: implement the corresponding ideal function for indefinite forms.
+
+# TODO: implement reduction theory for indefinite forms.
 class QuadraticForm:
     """Define an integral binary quadratic form.
 
@@ -462,6 +483,22 @@ class QuadraticForm:
         self.a, self.b, self.c = a, b, c
 
     def __call__(self,x,y):
+        """Evaluate the quadratic form at the given point.
+        
+        Examples:
+        >>> f = QuadraticForm(1,1,1); f
+        x^2+xy+y^2
+        >>> f(1,1)
+        3
+        >>> g = QuadraticForm(5,-6,2)
+        >>> g(1,1)
+        1
+        
+        So g is equivalent to the principal form. This also follows from the
+        theory since g.disc() = -4 and there is only one equivalence class of
+        forms of discriminant -4.
+        """
+        
         return self.a*x**2 + self.b*x*y + self.c*y**2
 
     def __getitem__(self,n):
@@ -503,6 +540,7 @@ class QuadraticForm:
         >>> g.disc()
         5
         """
+        
         return self.b**2 - 4*self.a*self.c
         
     def corresponding_ideal(self):
@@ -511,9 +549,29 @@ class QuadraticForm:
         The group of proper fractional ideals is isomorphic to the group of
         Gaussian forms (which is in turn isomorphic to the narrow class group
         of the corresponding order). See MScThesis.
+        
+        Examples:
+        >>> f = QuadraticForm(1,0,1)
+        >>> I = f.corresponding_ideal(); I
+        [1, sqrt(-1)]
+        >>> g = QuadraticForm(1,1,1)
+        >>> J = g.corresponding_ideal(); J
+        [1, -1+(1 + sqrt(-3))/2]
+        >>> h = QuadraticForm(5, -6, 2); h
+        5x^2-6xy+2y^2
+        >>> h.disc()
+        -4
+        >>> H = h.corresponding_ideal(); H
+        [5, 3+sqrt(-1)]
         """
 
-        pass
+        if self.disc() < 0:
+            if self.disc() % 4 == 0:
+                return QuadraticIntId(self.disc(), self.a, -self.b//2, 1)
+            else:
+                return QuadraticIntId(self.disc(), self.a, -(self.b + 1)//2, 1)
+        else:
+            pass
 
     def is_reduced(self):
         return not ((self.a == self.c and self.b < 0) or (self.a == -self.b))
