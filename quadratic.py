@@ -1,7 +1,7 @@
 """Define quadratic fields, quadratic forms and other related objects.
 
 This module defines quadratic fields (QuadraticRat class), quadratic integers
-(QuadraticInt class), quadratic integral ideals (QuadraticIntId class) and 
+(QuadraticOrder class), quadratic integral ideals (QuadraticIntId class) and
 quadratic forms.
 """
 
@@ -11,13 +11,13 @@ from time import time
 
 def is_discriminant(D):
     return D % 4 == 0 or D % 4 == 1
-    
+
 def class_number(D):
     """Compute the class number of the quadratic field of discriminant D.
-    
+
     This function uses the theory of binary quadratic forms to compute the
     class number of the quadratic order of discriminant D.
-    
+
     Example:
     >>> for D in [D for D in range(-1,-200,-1) if is_discriminant(D)]:
     ...     if class_number(D) == 1:
@@ -36,9 +36,10 @@ def class_number(D):
     -43
     -67
     -163
-    
+
     As expected!
     """
+
     assert is_discriminant(D)
     if D < 0:
         return len(QuadraticForm.Gaussian_forms(D))
@@ -47,7 +48,7 @@ def class_number(D):
 
 def fund_decomp(D):
     """Return a decomposition D = f**2 D_K with D_K a fundamental discriminant.
-    
+
     Example:
     >>> fund_decomp(-4)
     (-4, 1)
@@ -58,6 +59,7 @@ def fund_decomp(D):
     >>> fund_decomp(20)
     (5, 2)
     """
+
     assert is_discriminant(D), "Not a discriminant!"
     f = int(sqrt(abs(D)))
     while not D % f**2 == 0: f -= 1
@@ -70,7 +72,7 @@ def fund_decomp(D):
 
 def is_fundamental(D):
     """Determine if the integer D is a fundamental discriminant.
-    
+
     Example:
     >>> is_fundamental(-4)
     True
@@ -83,20 +85,22 @@ def is_fundamental(D):
     >>> is_fundamental(20)
     False
     """
+
     return is_discriminant(D) and fund_decomp(D)[1] == 1
-       
+
+
 class QuadraticRat:
     """Represent an element in a quadratic field of fixed discriminant.
-    
-    Represents an element of the unique quadratic extension of Q of 
-    discriminant D_K, where D_K is a fundamental discriminant. The computations 
-    are done in the basis 
+
+    Represents an element of the unique quadratic extension of Q of
+    discriminant D_K, where D_K is a fundamental discriminant. The computations
+    are done in the basis
     [1,sqrt(D_K//4)]  if D % 4 == 0 and
     [1,sqrt(D_K)]     if D % 4 == 1
-    
+
     Note that this is the standard basis (the square root of the square-free
     part of D_K) since D_K is fundamental.
-    
+
     Examples:
     >>> a = QuadraticRat(-4,rat.Rat(1,2),rat.Rat(3,2)); a
     1/2+3/2*sqrt(-1)
@@ -125,10 +129,10 @@ class QuadraticRat:
 
     def __init__(self,D_K,a=1,b=0):
         """Construct a quadratic element in the basis [1,sqrt(D_K)].
-        
-        Note: D_K is square-free if it is congruent to 1 mod 4 and D_K//4 is 
+
+        Note: D_K is square-free if it is congruent to 1 mod 4 and D_K//4 is
         square-free if D_K is congruent to 0 mod 4.
-        
+
         Example:
         >>> i = QuadraticRat(-4, 0, 1)
         >>> i**2
@@ -172,8 +176,8 @@ class QuadraticRat:
 
     def __mul__(self, other):
         if isinstance(self,other.__class__) and self.D_K == other.D_K:
-            return QuadraticRat(self.D_K,self.a*other.a 
-                                + self.D0*self.b*other.b, 
+            return QuadraticRat(self.D_K,self.a*other.a
+                                + self.D0*self.b*other.b,
                                 self.b*other.a + self.a*other.b)
         elif isinstance(other,rat.Rat) or isinstance(other,int):
             return QuadraticRat(self.D_K,self.a * other,self.b * other)
@@ -190,7 +194,7 @@ class QuadraticRat:
 
     def __truediv__(self,other):
         if isinstance(self,other.__class__) and self.D_K == other.D_K:
-            return QuadraticRat(self.D_K,(self.a*other.a 
+            return QuadraticRat(self.D_K,(self.a*other.a
                                 - self.D0*self.b*other.b)/other.norm(),
                                 (other.a*self.b - self.a*other.b)/other.norm())
         elif isinstance(other,rat.Rat) or isinstance(other,int):
@@ -229,22 +233,22 @@ class QuadraticRat:
         if not len(s) == 0: return s.replace('+-','-').replace('1*','')
         return "0"
 
-        
+
 # DEVEL: allow interaction with integers. This doesn't seem to affect the speed
 # too much.
 class QuadraticOrder:
     """Represent the quadratic order of a given discriminant.
-    
+
     Elements in the quadratic order of discriminant D are represented by their
     integral components in the basis
     [1,sqrt(D//4)]      if D % 4 == 0 and
     [1,(1 + sqrt(D))/2] if D % 4 == 1
-    See quadratic_comp3.jpg for remarks about this choice of basis. Note that 
+    See quadratic_comp3.jpg for remarks about this choice of basis. Note that
     the order Z[sqrt(d)] has discriminant 4d and so our choice of basis gives
     [1,sqrt(d)], which is the natural choice. Note also that there is no need
     to factor the discriminant into its fundamental and square part to use this
     basis.
-    
+
     Example:
     >>> phi = QuadraticOrder(5,0,1); phi
     (1 + sqrt(5))/2
@@ -253,6 +257,8 @@ class QuadraticOrder:
     >>> i = QuadraticOrder(-4,0,1)
     >>> i**2
     -1
+    >>> i**0
+    1
     >>> one = QuadraticOrder(-4,1,0)
     >>> i*(one - i)**2 # 2 ramifies in Z[i]
     2
@@ -300,12 +306,13 @@ class QuadraticOrder:
 
     def norm(self):
         if self.D % 4 == 1:
-            return self.a*self.a + self.a*self.b + self.b*self.b*(1 - self.D)//4
+            return (self.a*self.a + self.a*self.b 
+                    + self.b*self.b*(1 - self.D)//4)
         return self.a*self.a - self.D//4*self.b*self.b
 
     def __pow__(self, n):
         if n==0:
-            return QuadraticInt(self.D,1,0)
+            return QuadraticOrder(self.D,1,0)
         elif n == 1: # Adding this line saves a bit of time
             return self
         else: # Creating the variable temp saves A LOT of time in computations.
@@ -333,30 +340,32 @@ class QuadraticOrder:
                 s += str(self.b) + "*" + "sqrt(" + str(self.D//4) + ")"
         if not len(s) == 0: return s.replace('+-','-').replace('1*','')
         return "0"
-    
+
 
 # DEVEL: could add a condition to test if the given Z-module is really
 # an integral ideal according to the ideal criterion (see MScThesis...)
 
 # DEVEL: could add a function the returns a simplified basis of the ideal
-# i.e. a basis with d = 0.
+# i.e. a basis with d = 0
 
 # DEVEL: add a way to represent the ideal.
 class QuadraticIntId:
     """Define an integral ideal in the quadratic order of discriminant D.
-    
+
     Defines an integral ideal I = [a, b + c*w], where a,b,c and d are
     integers and the basis of the order is
     [1,sqrt(D//4)]      if D % 4 == 0 and
     [1,(1 + sqrt(D))/2] if D % 4 == 1
-    
-    Note that this is not the same basis as in MScThesis. 
+
+    Note that this is not the same basis as in MScThesis.
     """
 
     def __init__(self,D,a,b,c):
         # Defines the ideal [a, b + c*w] in the unique order of discriminant D.
         assert is_discriminant(D), (str(D_K) + " is not a discr!")
         self.D = D
+        decomp = fund_decomp(D)
+        self.D_K, self.f = decomp
         # Those sign changes are made so that I has positive orientation, i.e.
         # Im((b+c*w_f)/a) > 0
         self.a = abs(a)
@@ -380,17 +389,17 @@ class QuadraticIntId:
         return self.f**2*self.D_K
 
     def integral_basis(self):
-        return (QuadraticInt(self.D_K,self.a,0),
-                QuadraticInt(self.D_K,self.b,self.c*self.f))
+        return (QuadraticOrder(self.D_K,self.a,0),
+                QuadraticOrder(self.D_K,self.b,self.c*self.f))
 
     # See quadratic_comp4 for the computations
     def corresponding_form(self):
         """Return the quadratic form corresponding to the ideal.
-        
+
         The form corresponding to the ideal I = [a, b + c*w] is
         N(a*x + (b + c*w)*y)/N(I).
-        
-        Examples: 
+
+        Examples:
         >>> I = QuadraticIntId(-4,1,0,1)
         >>> I.corresponding_form()
         x^2+y^2
@@ -398,40 +407,43 @@ class QuadraticIntId:
         >>> J.corresponding_form()
         x^2+xy+y^2
         """
+
         if self.D % 4 == 1:
-            return QuadraticForm(self.a//self.c, 2*self.b//self.c + 1, 
-                                 (self.b**2 + self.b*self.c 
+            return QuadraticForm(self.a//self.c, 2*self.b//self.c + 1,
+                                 (self.b**2 + self.b*self.c
                                  + (1 - self.D)//4*self.c**2)//(self.a*self.c))
         else:
             return QuadraticForm(self.a//self.c, 2*self.b//self.c,
                                  (self.b**2 - self.D//4*self.c**2)//
                                  (self.a*self.c))
-                                 
-    # Computations in the basis [1,wf]        
+
+    # Computations in the basis [1,wf]
     # def corresponding_form(self):
         # if self.D_K % 4 == 0:
             # return QuadraticForm(self.a//self.c, 2*self.b//self.c,
                                  # (self.b**2 - self.get_disc()//4*self.c**2)//
                                  # (self.a*self.c))
-        # return     QuadraticForm(self.a//self.c, 2*self.b//self.c + self.f, 
-                                 # (self.b**2 + self.b*self.c*self.f + 
-                                 # (self.f**2 - self.get_disc())//4*self.c**2)//
+        # return     QuadraticForm(self.a//self.c, 2*self.b//self.c + self.f,
+                                 # (self.b**2 + self.b*self.c*self.f +
+                                 #(self.f**2 - self.get_disc())//4*self.c**2)//
                                  # (self.a*self.c))
 
     def __repr__(self):
         basis = self.integral_basis()
         return "[" + basis[0].__str__() + "," + basis[1].__str__() + "]"
 
-        
-# DEVEL: Implement composition
+
+# DEVEL: Implement composition.
+
+# TODO: implement the corresponding ideal function.
 class QuadraticForm:
     """Define an integral binary quadratic form.
-    
+
     That is a polynomial of the form a*x**2 + b*x*y + c*y**2. This class
     defines the discriminant. Quadratic form objects are also callable. See
     examples below.
-    
-    Examples: 
+
+    Examples:
     >>> f = QuadraticForm(1,0,1)
     >>> f
     x^2+y^2
@@ -440,12 +452,13 @@ class QuadraticForm:
     >>> f.disc()
     -4
     """
-    
+
     def __init__(self,a,b,c):
         """Define an integral binary quadratic form.
-        
+
         Defined by its coefficients a, b and c.
         """
+
         self.a, self.b, self.c = a, b, c
         self._fund_decomp = fund_decomp(self.disc())
 
@@ -466,91 +479,58 @@ class QuadraticForm:
 
     def __call__(self,x,y):
         return self.a*x**2 + self.b*x*y + self.c*y**2
-        
+
     def corresponding_ideal(self):
         """Return the integral ideal corresponding to the form.
-        
+
         The group of proper fractional ideals is isomorphic to the group of
         Gaussian forms (which is in turn isomorphic to the narrow class group
         of the corresponding order). See MScThesis.
         """
 
-        
+        pass
+
     def is_reduced(self):
-        assert self.disc() < 0, "Not a definite form!"
         return not ((self.a == self.c and self.b < 0) or (self.a == -self.b))
-    
+
     def is_primitive(self):
         return gcd.gcd(self.a,self.b,self.c) == 1
-    
+
     @staticmethod
     def almost_reduced_forms(D):
         assert is_discriminant(D), (str(D) + " is not a discriminant.")
-        if D < 0: 
+        if D < 0:
             M = int((abs(D)/3)**0.5)
-            return [QuadraticForm(a,b,(b**2-D)//(4*a)) for a in range(1,M+1) 
+            return [QuadraticForm(a,b,(b**2-D)//(4*a)) for a in range(1,M+1)
                     for b in range(-a,a+1) if (b**2-D)%(4*a) == 0]
         else:
             return None
-            
+
+    @staticmethod
+    def reduced_representatives(D):
+        assert is_discriminant(D) and D < 0, ("Not a negative discriminant.")
+        return [f for f in QuadraticForm.almost_reduced_forms(D)
+                if f.is_reduced()]
+
+    @staticmethod
+    def reduced_forms(D):
+        return QuadraticForm.reduced_representatives(D)
+
     @staticmethod
     def representatives(D):
         assert is_discriminant(D), (str(D) + " is not a discriminant.")
         if D < 0:
             return QuadraticForm.reduced_representatives(D)
-        else: 
+        else:
             return None
-        
-    @staticmethod
-    def reduced_representatives(D):
-        assert D < 0, ("The discriminant is not negative")
-        return [f for f in QuadraticForm.almost_reduced_forms(D) 
-                if f.is_reduced()]
-            
-    @staticmethod
-    def reduced_forms(D):
-        return QuadraticForm.reduced_representatives(D)
-                
+
     @staticmethod
     def Gaussian_forms(D):
-        assert D < 0 and is_discriminant(D)
+        assert is_discriminant(D) and D < 0, ("Not a negative discriminant.")
         return [f for f in QuadraticForm.reduced_representatives(D)
                 if f.is_primitive()]
-                
+
 
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
-    import sys
-    for D in sys.argv[1:]:
-        print(D,":",QuadraticForm.class_number(int(D)))
-    # print("Testing with Fibonacci:")
-    # phi = QuadraticRat(5,Rat(1,2),Rat(1,2))
-    # print("The 1000th Fibonacci number is:",2*(phi**25).b)
-    # phiRat = QuadraticRat(5,rat.Rat(1,2),rat.Rat(1,2))
-    # phiInt = QuadraticInt(5,0,1)
-    # N = int(input("Enter an integer: "))
-    # start = time()
-    # print("Computing the",N,"th Fibonacci number with QuadraticInt: ")
-    # x1 = (phiInt**N).b
-    # print("Done! ",time() - start)
-    # start = time()
-    # print("Computing the",N,"th Fibonacci number with QuadraticRat: ")
-    # x2 = (phiRat**N).b
-    # print("Done! ",time() - start)
-    # print("Are they equal: ", x1 == 2*x2)
-    
-    # print("Testing with random quadratic elements:")
-    # xRat = QuadraticRat(-8,rat.Rat(2),rat.Rat(1,2))
-    # xInt = QuadraticInt(-8,2,1)
-    # print("The first is:", xRat, "and the second is",xInt)
-    # N = int(input("Enter an integer: "))
-    # start = time()
-    # print("Computing the",N,"th power of xInt: ")
-    # x1 = xInt**N
-    # print("Done! ",time() - start)
-    # start = time()
-    # print("Computing the",N,"th power of xRat: ")
-    # x2 = xRat**N
-    # print("Done! ",time() - start)
-    # print("Are they equal: ", x1.b == 2*x2.b and x1.a == x2.a)
