@@ -411,12 +411,19 @@ class QuadraticIntId:
         return (QuadraticOrder(self.D_K,self.a,0),
                 QuadraticOrder(self.D_K,self.b,self.c*self.f))
 
-    # See quadratic_comp4 for the computations
+    # See quadratic_comp4 for the computations, but replace y by -y...
+    # This is the same as sending the form to its inverse under Gauss 
+    # composition. By doing so, going from forms, to ideal and then back to
+    # forms gives the identity, instead of the inversion map...
     def corresponding_form(self):
         """Return the quadratic form corresponding to the ideal.
 
         The form corresponding to the ideal I = [a, b + c*w] is
-        N(a*x + (b + c*w)*y)/N(I).
+        N(a*x -(b + c*w)*y)/N(I). The minus sign is there to simplify the
+        bijection. This is the same as sending the corresponding form to its
+        inverse under Gauss composition. By doing so, the map going from forms
+        to ideals and the back to forms gives the identity right away (on the
+        level of classes, of course...)
 
         Examples:
         >>> I = QuadraticIntId(-4,1,0,1)
@@ -424,15 +431,17 @@ class QuadraticIntId:
         x^2+y^2
         >>> J = QuadraticIntId(-3,1,0,1)
         >>> J.corresponding_form()
-        x^2+xy+y^2
+        x^2-xy+y^2
+        
+        Note that the last form is equivalent to the form x^2+xy+y^2.
         """
 
         if self.D % 4 == 1:
-            return QuadraticForm(self.a//self.c, 2*self.b//self.c + 1,
+            return QuadraticForm(self.a//self.c, -(2*self.b//self.c + 1),
                                  (self.b**2 + self.b*self.c
                                  + (1 - self.D)//4*self.c**2)//(self.a*self.c))
         else:
-            return QuadraticForm(self.a//self.c, 2*self.b//self.c,
+            return QuadraticForm(self.a//self.c, -2*self.b//self.c,
                                  (self.b**2 - self.D//4*self.c**2)//
                                  (self.a*self.c))
 
@@ -527,6 +536,23 @@ class QuadraticForm:
             elif n == 1: return self.b
             else:        return self.c
 
+    def __eq__(self,other):
+        """Determine if two quadratic forms are equal (not only equivalent).
+        
+        Verifies that the coefficients of the two forms match.
+        
+        Examples:
+        >>> f = QuadraticForm(1,0,1)
+        >>> g = QuadraticForm(5,-6,2)
+        >>> f == g # f is not equal to g...
+        False
+        >>> f == g.reduced_class_rep() # But they are equivalent!
+        True
+        """
+        
+        assert isinstance(other,QuadraticForm), "Not two QuadraticForm object."
+        return self.a == other.a and self.b == other.b and self.c == other.c
+            
     def disc(self):
         """Return the discriminant of the binary quadratic form.
 
@@ -563,6 +589,22 @@ class QuadraticForm:
         -4
         >>> H = h.corresponding_ideal(); H
         [5, 3+sqrt(-1)]
+        
+        One can also test the bijection between ideals and forms.
+        
+        Examples:
+        >>> f = QuadraticForm(1,0,1)
+        >>> ff = f.corresponding_ideal().corresponding_form()
+        >>> f.is_equiv_to(ff)
+        True
+        >>> classes = QuadraticForm.Gaussian_forms(-71)
+        >>> len(classes) == class_number(-71) # Just to check!
+        True
+        >>> for g in classes:
+        ...     gg = g.corresponding_ideal().corresponding_form()
+        ...     print(g.is_equiv_to(gg),end = ", ")
+        ... 
+        True, True, True, True, True, True, True, 
         """
 
         if self.is_pos_def():
@@ -574,7 +616,7 @@ class QuadraticForm:
             pass
 
     def is_pos_def(self):
-        return self.disc() < 0
+        return self.disc() < 0 and self.a > 0
 
     def is_almost_reduced(self):
         return abs(self.b) <= self.a and self.a <= self.c
@@ -585,6 +627,9 @@ class QuadraticForm:
 
     def reduce(self):
         """Reduce the quadratic form.
+        
+        This method does not return a new quadratic form. It modifies the
+        coefficients of f until f is reduced.
 
         Examples:
         >>> f = QuadraticForm(1,0,1)
@@ -618,6 +663,44 @@ class QuadraticForm:
             else: # a == c
                 self.b = abs(self.b)
 
+    def reduced_class_rep(self):
+        """Return the reduced representative in the class of self.
+        
+        Given a positive definite form f, return the unique reduced form in the
+        SL2(Z) equivalence class of f. This method does not modify f.
+        
+        Examples:
+        >>> f = QuadraticForm(5,-6,2)
+        >>> f.reduced_class_rep()
+        x^2+y^2
+        """
+        
+        g = QuadraticForm(self.a,self.b,self.c)
+        g.reduce()
+        return g
+        
+    def is_equiv_to(self,other):
+        """Determine if self is SL2(Z)-equivalent to other.
+        
+        Examples:
+        >>> f = QuadraticForm(1,0,1)
+        >>> g = QuadraticForm(5,-6,2)
+        >>> f.is_equiv_to(g)
+        True
+        >>> g.is_equiv_to(f)
+        True
+        >>> f == g
+        False
+        """
+        
+        assert (isinstance(other, QuadraticForm) 
+                and self.disc() == other.disc()), "Not two QF with same disc."
+        if self.disc() < 0:
+            return self.reduced_class_rep() == other.reduced_class_rep()
+        else:
+            return NotImplemented
+        
+        
     def is_primitive(self):
         return gcd.gcd(self.a,self.b,self.c) == 1
 
@@ -629,7 +712,7 @@ class QuadraticForm:
             return [QuadraticForm(a,b,(b**2-D)//(4*a)) for a in range(1,M+1)
                     for b in range(-a,a+1) if (b**2-D)%(4*a) == 0]
         else:
-            return None
+            return NotImplemented
 
     @staticmethod
     def reduced_representatives(D):
@@ -659,11 +742,12 @@ class QuadraticForm:
     def __repr__(self):
         s = ""
         for t in zip([self.a,self.b,self.c],["x^2","xy","y^2"]):
-            if t[0] == 0:   pass
-            elif t[0] == 1: s += '+' + t[1]
-            else:           s += '+' + str(t[0]) + t[1]
+            if t[0] == 0:    pass
+            elif t[0] == 1:  s += '+' + t[1]
+            elif t[0] == -1: s += '-' + t[1]
+            else:            s += '+' + str(t[0]) + t[1]
         if s[0] == '+': s = s[1:]
-        return s.replace('+-','-')
+        return s.replace('+-','-').replace('1','')
 
 if __name__ == "__main__":
     import doctest
