@@ -460,26 +460,51 @@ class QuadraticForm:
         """
 
         self.a, self.b, self.c = a, b, c
-        self._fund_decomp = fund_decomp(self.disc())
-
-    def disc(self):
-        return b**2 - 4*a*c
-
-    def __repr__(self):
-        s = ""
-        for t in zip([self.a,self.b,self.c],["x^2","xy","y^2"]):
-            if t[0] == 0:   pass
-            elif t[0] == 1: s += '+' + t[1]
-            else:           s += '+' + str(t[0]) + t[1]
-        if s[0] == '+': s = s[1:]
-        return s.replace('+-','-')
-
-    def disc(self):
-        return self.b**2 - 4*self.a*self.c
 
     def __call__(self,x,y):
         return self.a*x**2 + self.b*x*y + self.c*y**2
 
+    def __getitem__(self,n):
+        """Return the nth coefficient of self in the basis x^2, xy, y^2.
+        
+        Examples:
+        >>> f = QuadraticForm(2,3,5); f
+        2x^2+3xy+5y^2
+        >>> for n in range(3):
+        ...    print(f[n])
+        ...
+        2
+        3
+        5
+        
+        If the key is not an integer, a TypeError is raised.
+        If the key is not in the range, a IndexError is raised.
+        """
+        
+        if not isinstance(n,int):
+            raise TypeError("key must be an integer.")
+        elif not (0 <= n and n <= 2):
+            raise IndexError("Index out of range.")
+        else:
+            if n == 0:   return self.a
+            elif n == 1: return self.b
+            else:        return self.c
+           
+    def disc(self):
+        """Return the discriminant of the binary quadratic form.
+        
+        Given a form f = ax^2+bxy+cy^2, this method returns b^2-4*a*c.
+        
+        Examples:
+        >>> f = QuadraticForm(1,0,1)
+        >>> f.disc()
+        -4
+        >>> g = QuadraticForm(1,3,1)
+        >>> g.disc()
+        5
+        """
+        return self.b**2 - 4*self.a*self.c
+        
     def corresponding_ideal(self):
         """Return the integral ideal corresponding to the form.
 
@@ -531,6 +556,15 @@ class QuadraticForm:
                 if f.is_primitive()]
 
 
+    def __repr__(self):
+        s = ""
+        for t in zip([self.a,self.b,self.c],["x^2","xy","y^2"]):
+            if t[0] == 0:   pass
+            elif t[0] == 1: s += '+' + t[1]
+            else:           s += '+' + str(t[0]) + t[1]
+        if s[0] == '+': s = s[1:]
+        return s.replace('+-','-')
+        
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
