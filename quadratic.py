@@ -306,30 +306,30 @@ class QuadraticOrder:
 
     def norm(self):
         """Compute the norm of the element.
-        
+
         The norm of an element x in a quadratic field is defined x*sigma(x),
         where sigma is the non-trivial automorphism of the field.
-        
+
         Examples:
         >>> x = QuadraticOrder(125,3,5)
         >>> x.norm() == (x*x.conj()).a # Recall that x*x.conj() = a + b*w
         True
         """
-        
+
         if self.D % 4 == 1:
-            return (self.a*self.a + self.a*self.b 
+            return (self.a*self.a + self.a*self.b
                     + self.b*self.b*(1 - self.D)//4)
         return self.a*self.a - self.D//4*self.b*self.b
 
     def __pow__(self, n):
         """Compute the positive powers of the element.
-        
+
         Examples:
         >>> w = QuadraticOrder(-3,0,1)
         >>> w**6
         1
         """
-        
+
         if n==0:
             return QuadraticOrder(self.D,1,0)
         elif n == 1: # Adding this line saves a bit of time
@@ -484,7 +484,7 @@ class QuadraticForm:
 
     def __call__(self,x,y):
         """Evaluate the quadratic form at the given point.
-        
+
         Examples:
         >>> f = QuadraticForm(1,1,1); f
         x^2+xy+y^2
@@ -493,17 +493,17 @@ class QuadraticForm:
         >>> g = QuadraticForm(5,-6,2)
         >>> g(1,1)
         1
-        
+
         So g is equivalent to the principal form. This also follows from the
         theory since g.disc() = -4 and there is only one equivalence class of
         forms of discriminant -4.
         """
-        
+
         return self.a*x**2 + self.b*x*y + self.c*y**2
 
     def __getitem__(self,n):
         """Return the nth coefficient of self in the basis x^2, xy, y^2.
-        
+
         Examples:
         >>> f = QuadraticForm(2,3,5); f
         2x^2+3xy+5y^2
@@ -513,11 +513,11 @@ class QuadraticForm:
         2
         3
         5
-        
+
         If the key is not an integer, a TypeError is raised.
         If the key is not in the range, a IndexError is raised.
         """
-        
+
         if not isinstance(n,int):
             raise TypeError("key must be an integer.")
         elif not (0 <= n and n <= 2):
@@ -526,12 +526,12 @@ class QuadraticForm:
             if n == 0:   return self.a
             elif n == 1: return self.b
             else:        return self.c
-           
+
     def disc(self):
         """Return the discriminant of the binary quadratic form.
-        
+
         Given a form f = ax^2+bxy+cy^2, this method returns b^2-4*a*c.
-        
+
         Examples:
         >>> f = QuadraticForm(1,0,1)
         >>> f.disc()
@@ -540,16 +540,16 @@ class QuadraticForm:
         >>> g.disc()
         5
         """
-        
+
         return self.b**2 - 4*self.a*self.c
-        
+
     def corresponding_ideal(self):
         """Return the integral ideal corresponding to the form.
 
         The group of proper fractional ideals is isomorphic to the group of
         Gaussian forms (which is in turn isomorphic to the narrow class group
         of the corresponding order). See MScThesis.
-        
+
         Examples:
         >>> f = QuadraticForm(1,0,1)
         >>> I = f.corresponding_ideal(); I
@@ -565,7 +565,7 @@ class QuadraticForm:
         [5, 3+sqrt(-1)]
         """
 
-        if self.disc() < 0:
+        if self.is_pos_def():
             if self.disc() % 4 == 0:
                 return QuadraticIntId(self.disc(), self.a, -self.b//2, 1)
             else:
@@ -573,8 +573,50 @@ class QuadraticForm:
         else:
             pass
 
+    def is_pos_def(self):
+        return self.disc() < 0
+
+    def is_almost_reduced(self):
+        return abs(self.b) <= self.a and self.a <= self.c
+
     def is_reduced(self):
-        return not ((self.a == self.c and self.b < 0) or (self.a == -self.b))
+        return (self.is_almost_reduced() and
+                not ((self.a == self.c and self.b < 0) or (self.a == -self.b)))
+
+    def reduce(self):
+        """Reduce the quadratic form.
+
+        Examples:
+        >>> f = QuadraticForm(1,0,1)
+        >>> f.reduce(); f
+        x^2+y^2
+        >>> g = QuadraticForm(5,-6,2)
+        >>> g.disc()
+        -4
+        >>> g.reduce(); g
+        x^2+y^2
+        >>> h = QuadraticForm(1,1,1)
+        >>> h.reduce(); h
+        x^2+xy+y^2
+        """
+
+        D = self.disc()
+        assert self.is_pos_def(), "Not a positive definite form."
+        while not self.is_reduced():
+            if self.c < self.a:
+                self.a, self.c = self.c, self.a
+                self.b = -self.b
+            elif abs(self.b) > self.a:
+                # solve |self.b+2*self.a*self.n| <= self.a for n
+                if self.b < 0:         n = int((self.a - self.b)/(2*self.a))
+                else:                  n = int((-self.a - self.b)/(2*self.a))
+                self.b = self.b + 2*self.a*n
+                self.c = (self.b**2 - D)//(4*self.a)
+            # At this point he form is almost reduced
+            elif abs(self.b) == self.a:
+                self.b = abs(self.b)
+            else: # a == c
+                self.b = abs(self.b)
 
     def is_primitive(self):
         return gcd.gcd(self.a,self.b,self.c) == 1
@@ -622,7 +664,7 @@ class QuadraticForm:
             else:           s += '+' + str(t[0]) + t[1]
         if s[0] == '+': s = s[1:]
         return s.replace('+-','-')
-        
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
