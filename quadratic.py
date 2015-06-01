@@ -360,6 +360,8 @@ class QuadraticOrder:
         if not len(s) == 0: return s.replace('+-','-').replace('1*','')
         return "0"
 
+    __str__ = __repr__
+
 
 # DEVEL: could add a condition to test if the given Z-module is really
 # an integral ideal according to the ideal criterion (see MScThesis...)
@@ -379,37 +381,86 @@ class QuadraticIntId:
     Note that this is not the same basis as in MScThesis.
     """
 
-    def __init__(self,D,a,b,c):
-        # Defines the ideal [a, b + c*w] in the unique order of discriminant D.
-        assert is_discriminant(D), (str(D_K) + " is not a discr!")
-        self.D = D
-        decomp = fund_decomp(D)
-        self.D_K, self.f = decomp
-        # Those sign changes are made so that I has positive orientation, i.e.
-        # Im((b+c*w_f)/a) > 0
-        self.a = abs(a)
-        if c < 0:
-            self.b = -b
-            self.c = -c
+    def __init__(self, gen1, gen2):
+        """Define an integral ideal in the order containing the generators.
+
+        Examples:
+        >>> I = QuadraticIntId(QuadraticOrder(-4,1,0), QuadraticOrder(-4,0,1))
+        >>> I
+        [1, sqrt(-1)]
+        """
+
+        assert (isinstance(gen1,QuadraticOrder) and 
+                isinstance(gen2,QuadraticOrder) and gen1.D == gen2.D)
+        self.gens = (gen1, gen2)
+        self.D = gen1.D
+        self.simplified_basis = QuadraticIntId.simplify_basis(*self.gens)
+
+    @staticmethod
+    def simplify_basis(gen1, gen2):
+        """Return a simplified basis of the integral ideal.
+
+        Given an integral ideal I = [a + b*w, c + d*w] in a quadratic order,
+        this method resturns a basis where one of the two generators is an
+        intger. This is possible by applying the euclidian algorithm on b and
+        c.
+
+        Examples:
+        >>> x = QuadraticOrder(-4,1,-1)
+        >>> y = QuadraticOrder(-4,1,1)
+        >>> QuadraticIntId.simplify_basis(x,y)
+        (2, 1, 1)
+        >>> z = QuadraticOrder(-4,1,0)
+        >>> QuadraticIntId.simplify_basis(y,z)
+        (1, 1, 1)
+        """
+
+        assert (isinstance(gen1,QuadraticOrder) and 
+                isinstance(gen2,QuadraticOrder) and gen1.D == gen2.D)
+        a, b = gen1.a, gen1.b
+        c, d = gen2.a, gen2.b
+        if b < 0: a, b = -a, -b
+        if d < 0: c, d = -c, -d
+        while not b*d == 0:
+            if b >= d:
+                q = b//d
+                a, b = a - q*c, b - q*d
+            else:
+                q = d//b
+                c, d = c - q*a, d - q*b
+        if b == 0:
+            return (abs(a), c, d)
         else:
-            self.b = b
-            self.c = c
+            return (abs(c), a, b) 
 
     def norm(self):
-        return a*c
+        """Return the norm of the integral ideal.
+
+        That is the index of this ideal in the order containing it. The norm
+        of the ideal [a + b*w, c + d*w] is then |a*d - b*c|.
+
+        Examples:
+        >>> I = QuadraticIntId(QuadraticOrder(-4,1,1),QuadraticOrder(-4,1,-1))
+        >>> I.norm()
+        2
+        >>> I = QuadraticIntId(QuadraticOrder(-4,1,0),QuadraticOrder(-4,0,1))
+        >>> I.norm()
+        1
+        """
+
+        return self.simplified_basis[0]*self.simplified_basis[2]
 
     def get_D_K(self):
-        return self.D_K
+        return fund_decomp(self.D)[1]
 
     def get_conductor(self):
-        return self.f
+        return fund_decomp(self.D)[0]
 
     def get_disc(self):
-        return self.f**2*self.D_K
+        return self.D
 
     def integral_basis(self):
-        return (QuadraticOrder(self.D_K,self.a,0),
-                QuadraticOrder(self.D_K,self.b,self.c*self.f))
+        return self.gens
 
     # See quadratic_comp4 for the computations, but replace y by -y...
     # This is the same as sending the form to its inverse under Gauss 
@@ -419,31 +470,30 @@ class QuadraticIntId:
         """Return the quadratic form corresponding to the ideal.
 
         The form corresponding to the ideal I = [a, b + c*w] is
-        N(a*x -(b + c*w)*y)/N(I). The minus sign is there to simplify the
+        N(a*x -(b + c*50w)*y)/N(I). The minus sign is there to simplify the
         bijection. This is the same as sending the corresponding form to its
         inverse under Gauss composition. By doing so, the map going from forms
         to ideals and the back to forms gives the identity right away (on the
         level of classes, of course...)
 
         Examples:
-        >>> I = QuadraticIntId(-4,1,0,1)
+        >>> I = QuadraticIntId(QuadraticOrder(-4,1,0),QuadraticOrder(-4,0,1))
         >>> I.corresponding_form()
         x^2+y^2
-        >>> J = QuadraticIntId(-3,1,0,1)
+        >>> J = QuadraticIntId(QuadraticOrder(-3,1,0),QuadraticOrder(-3,0,1))
         >>> J.corresponding_form()
         x^2-xy+y^2
         
         Note that the last form is equivalent to the form x^2+xy+y^2.
         """
 
+        a, b, c = self.simplified_basis
         if self.D % 4 == 1:
-            return QuadraticForm(self.a//self.c, -(2*self.b//self.c + 1),
-                                 (self.b**2 + self.b*self.c
-                                 + (1 - self.D)//4*self.c**2)//(self.a*self.c))
+            return QuadraticForm(a//c, -(2*b//c + 1), 
+                                 (b**2 + b*c + (1 - self.D)//4*c**2)//(a*c))
         else:
-            return QuadraticForm(self.a//self.c, -2*self.b//self.c,
-                                 (self.b**2 - self.D//4*self.c**2)//
-                                 (self.a*self.c))
+            return QuadraticForm(a//c, -2*b//c,
+                                 (b**2 - self.D//4*c**2)//(a*c))
 
     # Computations in the basis [1,wf]
     # def corresponding_form(self):
@@ -459,6 +509,8 @@ class QuadraticIntId:
     def __repr__(self):
         basis = self.integral_basis()
         return "[" + basis[0].__str__() + ", " + basis[1].__str__() + "]"
+
+    __str__ = __repr__
 
 
 # DEVEL: Implement composition.
@@ -602,16 +654,23 @@ class QuadraticForm:
         True
         >>> for g in classes:
         ...     gg = g.corresponding_ideal().corresponding_form()
-        ...     print(g.is_equiv_to(gg),end = ", ")
-        ... 
-        True, True, True, True, True, True, True, 
+        ...     if not g.is_equiv_to(gg):
+        ...         print("There is a problem!!!")
+        ...
+
         """
 
         if self.is_pos_def():
             if self.disc() % 4 == 0:
-                return QuadraticIntId(self.disc(), self.a, -self.b//2, 1)
+                return QuadraticIntId(
+                            QuadraticOrder(self.disc(),self.a,0),
+                            QuadraticOrder(self.disc(),-self.b//2, 1)
+                            )
             else:
-                return QuadraticIntId(self.disc(), self.a, -(self.b + 1)//2, 1)
+                return QuadraticIntId(
+                            QuadraticOrder(self.disc(), self.a, 0),
+                            QuadraticOrder(self.disc(), -(self.b + 1)//2, 1)
+                            )
         else:
             pass
 
