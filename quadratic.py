@@ -428,7 +428,7 @@ class QuadraticIntId:
         (2, 1+sqrt(-1))
         >>> z = QuadraticOrder(-4,1,0)
         >>> QuadraticIntId.simplify_basis(y,z)
-        (1, 1+sqrt(-1))
+        (1, sqrt(-1))
         """
 
         assert (isinstance(gen1,QuadraticOrder) and
@@ -446,10 +446,10 @@ class QuadraticIntId:
                 c, d = c - q*a, d - q*b
         if b == 0:
             return (QuadraticOrder(gen1.D, abs(a), 0),
-                    QuadraticOrder(gen1.D, c, d))
+                    QuadraticOrder(gen1.D, c % abs(a), d))
         else:
             return (QuadraticOrder(gen1.D, abs(c), 0),
-                    QuadraticOrder(gen1.D, a, b))
+                    QuadraticOrder(gen1.D, a % abs(c), b))
 
     def norm(self):
         """Return the norm of the integral ideal.
@@ -476,6 +476,21 @@ class QuadraticIntId:
 
     def get_disc(self):
         return self.D
+
+    def  get_abc(self):
+        """Return (a, b, c) such that the ideal is [a, b + c*w].
+
+        Examples:
+        >>> I = QuadraticIntId(D = 20, abc = (1,2,3))
+        >>> I.get_abc()
+        (1, 0, 3)
+        >>> J = QuadraticIntId(QuadraticOrder(-4,1,1),QuadraticOrder(-4,1,-1))
+        >>> J.get_abc()
+        (2, 1, 1)
+        """
+
+        return (self.simplified_basis[0].a, self.simplified_basis[1].a,
+                self.simplified_basis[1].b)
 
     def integral_basis(self):
         return self.gens
@@ -505,8 +520,7 @@ class QuadraticIntId:
         Note that the last form is equivalent to the form x^2+xy+y^2.
         """
 
-        a    = self.simplified_basis[0].a
-        b, c = self.simplified_basis[1].a, self.simplified_basis[1].b
+        a, b, c = self.get_abc()
         if self.D % 4 == 1:
             return QuadraticForm(a//c, -(2*b//c + 1),
                                  (b**2 + b*c + (1 - self.D)//4*c**2)//(a*c))
@@ -526,7 +540,7 @@ class QuadraticIntId:
                                  # (self.a*self.c))
 
     def __repr__(self):
-        return "[{0[0]!s}, {0[1]!s}]".format(self.integral_basis())
+        return "[{0[0]!s}, {0[1]!s}]".format(self.simplified_basis)
 
     __str__ = __repr__
 
@@ -652,7 +666,7 @@ class QuadraticForm:
         [1, sqrt(-1)]
         >>> g = QuadraticForm(1,1,1)
         >>> J = g.corresponding_ideal(); J
-        [1, -1+(1 + sqrt(-3))/2]
+        [1, (1 + sqrt(-3))/2]
         >>> h = QuadraticForm(5, -6, 2); h
         5x^2-6xy+2y^2
         >>> h.disc()
