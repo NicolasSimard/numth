@@ -381,46 +381,62 @@ class QuadraticIntId:
     Note that this is not the same basis as in MScThesis.
     """
 
-    def __init__(self, gen1, gen2):
+    def __init__(self, *args, **kwargs):
         """Define an integral ideal in the order containing the generators.
+
+        An alternative way of constructing an ideal is by specifying directly
+        the order containing it (by letting D = discriminant) and the integers
+        a,b and c such that the ideal has the form [a, b + c*w] in the standard
+        basis of the order of discriminant D.
 
         Examples:
         >>> I = QuadraticIntId(QuadraticOrder(-4,1,0), QuadraticOrder(-4,0,1))
         >>> I
         [1, sqrt(-1)]
+        >>> J = QuadraticIntId(D = -4, abc = (1,0,1))
+        >>> J
+        [1, sqrt(-1)]
         """
 
-        assert (isinstance(gen1,QuadraticOrder) and 
-                isinstance(gen2,QuadraticOrder) and gen1.D == gen2.D)
-        self.gens = (gen1, gen2)
-        self.D = gen1.D
+        if 'abc' in kwargs and 'D' in kwargs:
+            self.gens = (QuadraticOrder(kwargs['D'],kwargs['abc'][0],0),
+                         QuadraticOrder(kwargs['D'],kwargs['abc'][1],kwargs['abc'][2]))
+            self.D = kwargs['D']
+        elif len(args) == 2: # We have a list of two generators
+            assert (isinstance(args[0],QuadraticOrder) and
+                    isinstance(args[1],QuadraticOrder) and
+                    args[0].D == args[1].D)
+            self.gens = (args[0], args[1])
+            self.D = args[0].D
         self.simplified_basis = QuadraticIntId.simplify_basis(*self.gens)
 
     @staticmethod
     def simplify_basis(gen1, gen2):
         """Return a simplified basis of the integral ideal.
 
-        Given an integral ideal I = [a + b*w, c + d*w] in a quadratic order,
-        this method resturns a basis where one of the two generators is an
-        intger. This is possible by applying the euclidian algorithm on b and
-        c.
+        Given an integral ideal I = [gen1, gen2] in a quadratic order, this
+        method resturns a couple (alpha,beta) of quadratic integers
+        representing the simplified basis [alpha, beta], where alpha = a is an
+        integer and beta = b + c*w, i.e. where on of the two generators is an
+        integer. This is possible by applying the euclidian algorithm the
+        irrational components of the generators.
 
         Examples:
         >>> x = QuadraticOrder(-4,1,-1)
         >>> y = QuadraticOrder(-4,1,1)
         >>> QuadraticIntId.simplify_basis(x,y)
-        (2, 1, 1)
+        (2, 1+sqrt(-1))
         >>> z = QuadraticOrder(-4,1,0)
         >>> QuadraticIntId.simplify_basis(y,z)
-        (1, 1, 1)
+        (1, 1+sqrt(-1))
         """
 
-        assert (isinstance(gen1,QuadraticOrder) and 
+        assert (isinstance(gen1,QuadraticOrder) and
                 isinstance(gen2,QuadraticOrder) and gen1.D == gen2.D)
-        a, b = gen1.a, gen1.b
-        c, d = gen2.a, gen2.b
-        if b < 0: a, b = -a, -b
-        if d < 0: c, d = -c, -d
+        a, b = gen1.a, gen1.b # gen1 = a + b*w
+        c, d = gen2.a, gen2.b # gen2 = c + d*w
+        if b < 0: a, b = -a, -b # So b >= 0
+        if d < 0: c, d = -c, -d # So d >= 0
         while not b*d == 0:
             if b >= d:
                 q = b//d
@@ -429,9 +445,11 @@ class QuadraticIntId:
                 q = d//b
                 c, d = c - q*a, d - q*b
         if b == 0:
-            return (abs(a), c, d)
+            return (QuadraticOrder(gen1.D, abs(a), 0),
+                    QuadraticOrder(gen1.D, c, d))
         else:
-            return (abs(c), a, b) 
+            return (QuadraticOrder(gen1.D, abs(c), 0),
+                    QuadraticOrder(gen1.D, a, b))
 
     def norm(self):
         """Return the norm of the integral ideal.
@@ -443,12 +461,12 @@ class QuadraticIntId:
         >>> I = QuadraticIntId(QuadraticOrder(-4,1,1),QuadraticOrder(-4,1,-1))
         >>> I.norm()
         2
-        >>> I = QuadraticIntId(QuadraticOrder(-4,1,0),QuadraticOrder(-4,0,1))
+        >>> I = QuadraticIntId(D = -4, abc = (1, 0, 1)) # The maximal order
         >>> I.norm()
         1
         """
 
-        return self.simplified_basis[0]*self.simplified_basis[2]
+        return self.simplified_basis[0].a*self.simplified_basis[1].b
 
     def get_D_K(self):
         return fund_decomp(self.D)[1]
@@ -463,7 +481,7 @@ class QuadraticIntId:
         return self.gens
 
     # See quadratic_comp4 for the computations, but replace y by -y...
-    # This is the same as sending the form to its inverse under Gauss 
+    # This is the same as sending the form to its inverse under Gauss
     # composition. By doing so, going from forms, to ideal and then back to
     # forms gives the identity, instead of the inversion map...
     def corresponding_form(self):
@@ -483,13 +501,14 @@ class QuadraticIntId:
         >>> J = QuadraticIntId(QuadraticOrder(-3,1,0),QuadraticOrder(-3,0,1))
         >>> J.corresponding_form()
         x^2-xy+y^2
-        
+
         Note that the last form is equivalent to the form x^2+xy+y^2.
         """
 
-        a, b, c = self.simplified_basis
+        a    = self.simplified_basis[0].a
+        b, c = self.simplified_basis[1].a, self.simplified_basis[1].b
         if self.D % 4 == 1:
-            return QuadraticForm(a//c, -(2*b//c + 1), 
+            return QuadraticForm(a//c, -(2*b//c + 1),
                                  (b**2 + b*c + (1 - self.D)//4*c**2)//(a*c))
         else:
             return QuadraticForm(a//c, -2*b//c,
@@ -507,8 +526,7 @@ class QuadraticIntId:
                                  # (self.a*self.c))
 
     def __repr__(self):
-        basis = self.integral_basis()
-        return "[" + basis[0].__str__() + ", " + basis[1].__str__() + "]"
+        return "[{0[0]!s}, {0[1]!s}]".format(self.integral_basis())
 
     __str__ = __repr__
 
@@ -590,9 +608,9 @@ class QuadraticForm:
 
     def __eq__(self,other):
         """Determine if two quadratic forms are equal (not only equivalent).
-        
+
         Verifies that the coefficients of the two forms match.
-        
+
         Examples:
         >>> f = QuadraticForm(1,0,1)
         >>> g = QuadraticForm(5,-6,2)
@@ -601,10 +619,10 @@ class QuadraticForm:
         >>> f == g.reduced_class_rep() # But they are equivalent!
         True
         """
-        
+
         assert isinstance(other,QuadraticForm), "Not two QuadraticForm object."
         return self.a == other.a and self.b == other.b and self.c == other.c
-            
+
     def disc(self):
         """Return the discriminant of the binary quadratic form.
 
@@ -641,9 +659,9 @@ class QuadraticForm:
         -4
         >>> H = h.corresponding_ideal(); H
         [5, 3+sqrt(-1)]
-        
+
         One can also test the bijection between ideals and forms.
-        
+
         Examples:
         >>> f = QuadraticForm(1,0,1)
         >>> ff = f.corresponding_ideal().corresponding_form()
@@ -686,7 +704,7 @@ class QuadraticForm:
 
     def reduce(self):
         """Reduce the quadratic form.
-        
+
         This method does not return a new quadratic form. It modifies the
         coefficients of f until f is reduced.
 
@@ -724,23 +742,23 @@ class QuadraticForm:
 
     def reduced_class_rep(self):
         """Return the reduced representative in the class of self.
-        
+
         Given a positive definite form f, return the unique reduced form in the
         SL2(Z) equivalence class of f. This method does not modify f.
-        
+
         Examples:
         >>> f = QuadraticForm(5,-6,2)
         >>> f.reduced_class_rep()
         x^2+y^2
         """
-        
+
         g = QuadraticForm(self.a,self.b,self.c)
         g.reduce()
         return g
-        
+
     def is_equiv_to(self,other):
         """Determine if self is SL2(Z)-equivalent to other.
-        
+
         Examples:
         >>> f = QuadraticForm(1,0,1)
         >>> g = QuadraticForm(5,-6,2)
@@ -751,15 +769,15 @@ class QuadraticForm:
         >>> f == g
         False
         """
-        
-        assert (isinstance(other, QuadraticForm) 
+
+        assert (isinstance(other, QuadraticForm)
                 and self.disc() == other.disc()), "Not two QF with same disc."
         if self.disc() < 0:
             return self.reduced_class_rep() == other.reduced_class_rep()
         else:
             return NotImplemented
-        
-        
+
+
     def is_primitive(self):
         return gcd.gcd(self.a,self.b,self.c) == 1
 
