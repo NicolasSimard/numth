@@ -42,7 +42,7 @@ def class_number(D):
 
     assert is_discriminant(D)
     if D < 0:
-        return len(QuadraticForm.Gaussian_forms(D))
+        return len(QuadraticForm.Gaussian_classes_reps(D))
     else:
         return None
 
@@ -630,7 +630,7 @@ class QuadraticForm:
         >>> g = QuadraticForm(5,-6,2)
         >>> f == g # f is not equal to g...
         False
-        >>> f == g.reduced_class_rep() # But they are equivalent!
+        >>> f == g.class_rep() # But they are equivalent!
         True
         """
 
@@ -681,7 +681,7 @@ class QuadraticForm:
         >>> ff = f.corresponding_ideal().corresponding_form()
         >>> f.is_equiv_to(ff)
         True
-        >>> classes = QuadraticForm.Gaussian_forms(-71)
+        >>> classes = QuadraticForm.Gaussian_classes_reps(-71)
         >>> len(classes) == class_number(-71) # Just to check!
         True
         >>> for g in classes:
@@ -754,7 +754,7 @@ class QuadraticForm:
             else: # a == c
                 self.b = abs(self.b)
 
-    def reduced_class_rep(self):
+    def class_rep(self):
         """Return the reduced representative in the class of self.
 
         Given a positive definite form f, return the unique reduced form in the
@@ -762,7 +762,7 @@ class QuadraticForm:
 
         Examples:
         >>> f = QuadraticForm(5,-6,2)
-        >>> f.reduced_class_rep()
+        >>> f.class_rep()
         x^2+y^2
         """
 
@@ -787,7 +787,7 @@ class QuadraticForm:
         assert (isinstance(other, QuadraticForm)
                 and self.disc() == other.disc()), "Not two QF with same disc."
         if self.disc() < 0:
-            return self.reduced_class_rep() == other.reduced_class_rep()
+            return self.class_rep() == other.class_rep()
         else:
             return NotImplemented
 
@@ -797,38 +797,41 @@ class QuadraticForm:
 
     @staticmethod
     def almost_reduced_forms(D):
-        assert is_discriminant(D), (str(D) + " is not a discriminant.")
+        assert is_discriminant(D) and D<0, (str(D) + " is not a discriminant.")
         if D < 0:
             M = int((abs(D)/3)**0.5)
             return [QuadraticForm(a,b,(b**2-D)//(4*a)) for a in range(1,M+1)
                     for b in range(-a,a+1) if (b**2-D)%(4*a) == 0]
-        else:
-            return NotImplemented
 
     @staticmethod
-    def reduced_representatives(D):
+    def reduced_classes_reps(D):
         assert is_discriminant(D) and D < 0, ("Not a negative discriminant.")
-        return [f for f in QuadraticForm.almost_reduced_forms(D)
-                if f.is_reduced()]
+        if D < 0:
+            return QuadraticForm.reduced_forms(D)
+        else:
+            pass
+            # take all reduced forms and compute cycles
 
     @staticmethod
     def reduced_forms(D):
-        return QuadraticForm.reduced_representatives(D)
-
-    @staticmethod
-    def representatives(D):
-        assert is_discriminant(D), (str(D) + " is not a discriminant.")
         if D < 0:
-            return QuadraticForm.reduced_representatives(D)
+            return [f for f in QuadraticForm.almost_reduced_forms(D)
+                    if f.is_reduced()]
         else:
-            return None
+            pass
+            # compute all possible reduced forms
+
 
     @staticmethod
-    def Gaussian_forms(D):
-        assert is_discriminant(D) and D < 0, ("Not a negative discriminant.")
-        return [f for f in QuadraticForm.reduced_representatives(D)
-                if f.is_primitive()]
+    def classes_reps(D):
+        assert is_discriminant(D), (str(D) + " is not a discriminant.")
+        return QuadraticForm.reduced_classes_reps(D)
 
+    @staticmethod
+    def Gaussian_classes_reps(D):
+        assert is_discriminant(D), ("Not a negative discriminant.")
+        return [f for f in QuadraticForm.classes_reps(D)
+                if f.is_primitive()]
 
     def __repr__(self):
         s = ""
