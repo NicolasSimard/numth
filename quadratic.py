@@ -532,11 +532,11 @@ class QuadraticIntId:
     # def corresponding_form(self):
         # if self.D_K % 4 == 0:
             # return QuadraticForm(self.a//self.c, 2*self.b//self.c,
-                                 # (self.b**2 - self.get_disc()//4*self.c**2)//
+                                 # (self.b**2 - self.D//4*self.c**2)//
                                  # (self.a*self.c))
         # return     QuadraticForm(self.a//self.c, 2*self.b//self.c + self.f,
                                  # (self.b**2 + self.b*self.c*self.f +
-                                 #(self.f**2 - self.get_disc())//4*self.c**2)//
+                                 #(self.f**2 - self.D//4*self.c**2)//
                                  # (self.a*self.c))
 
     def __repr__(self):
@@ -550,6 +550,8 @@ class QuadraticIntId:
 # TODO: implement the corresponding ideal function for indefinite forms.
 
 # TODO: implement reduction theory for indefinite forms.
+
+# TODO: wrap functions in decorator to test for discriminant.
 class QuadraticForm:
     """Define an integral binary quadratic form.
 
@@ -563,7 +565,7 @@ class QuadraticForm:
     x^2+y^2
     >>> f(1,2)
     5
-    >>> f.disc()
+    >>> f.D
     -4
     """
 
@@ -573,7 +575,8 @@ class QuadraticForm:
         Defined by its coefficients a, b and c.
         """
 
-        self.a, self.b, self.c = a, b, c
+        self._a, self._b, self._c = a, b, c
+        self._D = b**2 - 4*a*c
 
     def __call__(self,x,y):
         """Evaluate the quadratic form at the given point.
@@ -588,7 +591,7 @@ class QuadraticForm:
         1
 
         So g is equivalent to the principal form. This also follows from the
-        theory since g.disc() = -4 and there is only one equivalence class of
+        theory since g.D = -4 and there is only one equivalence class of
         forms of discriminant -4.
         """
 
@@ -637,21 +640,41 @@ class QuadraticForm:
         assert isinstance(other,QuadraticForm), "Not two QuadraticForm object."
         return self.a == other.a and self.b == other.b and self.c == other.c
 
-    def disc(self):
+    def __hash__(self):
+        return hash((self.a, self.b, self.c))
+
+    @property
+    def D(self):
         """Return the discriminant of the binary quadratic form.
 
         Given a form f = ax^2+bxy+cy^2, this method returns b^2-4*a*c.
 
         Examples:
         >>> f = QuadraticForm(1,0,1)
-        >>> f.disc()
+        >>> f.D
         -4
-        >>> g = QuadraticForm(1,3,1)
-        >>> g.disc()
-        5
+        >>> g = QuadraticForm(1, 0, -10)
+        >>> g.D
+        40
         """
 
-        return self.b**2 - 4*self.a*self.c
+        return self._D
+
+    @property
+    def a(self):
+        return self._a
+
+    @property
+    def b(self):
+        return self._b
+
+    @property
+    def c(self):
+        return self._c
+
+    @property
+    def disc(self):
+        return self._D
 
     def corresponding_ideal(self):
         """Return the integral ideal corresponding to the form.
@@ -669,7 +692,7 @@ class QuadraticForm:
         [1, (1 + sqrt(-3))/2]
         >>> h = QuadraticForm(5, -6, 2); h
         5x^2-6xy+2y^2
-        >>> h.disc()
+        >>> h.D
         -4
         >>> H = h.corresponding_ideal(); H
         [5, 3+sqrt(-1)]
@@ -693,21 +716,21 @@ class QuadraticForm:
         """
 
         if self.is_pos_def():
-            if self.disc() % 4 == 0:
+            if self.D % 4 == 0:
                 return QuadraticIntId(
-                            QuadraticOrder(self.disc(),self.a,0),
-                            QuadraticOrder(self.disc(),-self.b//2, 1)
+                            QuadraticOrder(self.D,self.a,0),
+                            QuadraticOrder(self.D,-self.b//2, 1)
                             )
             else:
                 return QuadraticIntId(
-                            QuadraticOrder(self.disc(), self.a, 0),
-                            QuadraticOrder(self.disc(), -(self.b + 1)//2, 1)
+                            QuadraticOrder(self.D, self.a, 0),
+                            QuadraticOrder(self.D, -(self.b + 1)//2, 1)
                             )
         else:
             pass
 
     def is_pos_def(self):
-        return self.disc() < 0 and self.a > 0
+        return self.D < 0 and self.a > 0
 
     def is_almost_reduced(self):
         return abs(self.b) <= self.a and self.a <= self.c
@@ -716,43 +739,41 @@ class QuadraticForm:
         return (self.is_almost_reduced() and
                 not ((self.a == self.c and self.b < 0) or (self.a == -self.b)))
 
-    def reduce(self):
-        """Reduce the quadratic form.
-
-        This method does not return a new quadratic form. It modifies the
-        coefficients of f until f is reduced.
+    def reduced_class_rep(self):
+        """Return a reduced form that is quivalent to the calling form.
 
         Examples:
         >>> f = QuadraticForm(1,0,1)
-        >>> f.reduce(); f
+        >>> f.reduced_class_rep()
         x^2+y^2
         >>> g = QuadraticForm(5,-6,2)
-        >>> g.disc()
+        >>> g.D
         -4
-        >>> g.reduce(); g
+        >>> g.reduced_class_rep()
         x^2+y^2
         >>> h = QuadraticForm(1,1,1)
-        >>> h.reduce(); h
+        >>> h.reduced_class_rep()
         x^2+xy+y^2
         """
 
-        D = self.disc()
-        assert self.is_pos_def(), "Not a positive definite form."
-        while not self.is_reduced():
-            if self.c < self.a:
-                self.a, self.c = self.c, self.a
-                self.b = -self.b
-            elif abs(self.b) > self.a:
-                # solve |self.b+2*self.a*self.n| <= self.a for n
-                if self.b < 0:         n = int((self.a - self.b)/(2*self.a))
-                else:                  n = int((-self.a - self.b)/(2*self.a))
-                self.b = self.b + 2*self.a*n
-                self.c = (self.b**2 - D)//(4*self.a)
+        a, b, c = self.a, self.b, self.c
+        D = self.D
+        while a > c or abs(b) > a or (abs(b) == a and b < 0) or (a == c and b < 0):
+            if a > c:
+                a, c = c, a
+                b = -b
+            elif abs(b) > a:
+                # solve |b+2*a*n| <= a for n
+                if b < 0: n = int((a - b)/(2*a))
+                else:     n = int((-a - b)/(2*a))
+                b = b + 2*a*n
+                c = (b**2 - D)//(4*a)
             # At this point he form is almost reduced
-            elif abs(self.b) == self.a:
-                self.b = abs(self.b)
+            elif abs(b) == a:
+                b = abs(b)
             else: # a == c
-                self.b = abs(self.b)
+                b = abs(b)
+        return QuadraticForm(a, b, c)
 
     def class_rep(self):
         """Return the reduced representative in the class of self.
@@ -766,9 +787,7 @@ class QuadraticForm:
         x^2+y^2
         """
 
-        g = QuadraticForm(self.a,self.b,self.c)
-        g.reduce()
-        return g
+        return self.reduced_class_rep()
 
     def is_equiv_to(self,other):
         """Determine if self is SL2(Z)-equivalent to other.
@@ -784,13 +803,11 @@ class QuadraticForm:
         False
         """
 
-        assert (isinstance(other, QuadraticForm)
-                and self.disc() == other.disc()), "Not two QF with same disc."
-        if self.disc() < 0:
+        assert (isinstance(other, QuadraticForm) and self.D == other.D), "Not two QF with same disc."
+        if self.D < 0:
             return self.class_rep() == other.class_rep()
         else:
-            return NotImplemented
-
+            pass
 
     def right_neighbor(self):
         """Return the right neighbor of the quadratif form.
@@ -827,11 +844,10 @@ class QuadraticForm:
         x^2+6xy-y^2
         """
 
-        assert self.disc() > 0, "The form has to be indefinite."
         a, b, c = self[0], self[1], self[2]
-        tau = (b + sqrt(self.disc()))/(2*c)
+        tau = (b + sqrt(self.D))/(2*c)
         aa = c
-        # Solve b + bb = 2cd for bb s.t sqrt(self.disc()) - |2c|<bb<sqrt(...)
+        # Solve b + bb = 2cd for bb s.t sqrt(self.D - |2c|<bb<sqrt(...)
         if c > 0:
             if tau < 0: d = int(tau - 1)
             else:       d = int(tau)
@@ -839,7 +855,7 @@ class QuadraticForm:
             if tau < 0: d = int(tau)
             else:       d = int(tau + 1)
         bb = 2*c*d - b
-        return QuadraticForm(aa, bb, (bb**2 - self.disc())//(4*aa))
+        return QuadraticForm(aa, bb, (bb**2 - self.D)//(4*aa))
 
     def is_primitive(self):
         return gcd.gcd(self.a,self.b,self.c) == 1
@@ -854,12 +870,20 @@ class QuadraticForm:
 
     @staticmethod
     def reduced_classes_reps(D):
-        assert is_discriminant(D) and D < 0, ("Not a negative discriminant.")
         if D < 0:
             return QuadraticForm.reduced_forms(D)
         else:
-            pass
-            # take all reduced forms and compute cycles
+            reps = []
+            S = set(QuadraticForm.reduced_forms(D))
+            while not len(S) == 0:
+                f0 = next(iter(S))
+                reps.append(f0)
+                S.discard(f0)
+                right = f0.right_neighbor()
+                while not right == f0:
+                    S.discard(right)
+                    right = right.right_neighbor()
+            return reps
 
     @staticmethod
     def reduced_forms(D):
