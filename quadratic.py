@@ -792,6 +792,55 @@ class QuadraticForm:
             return NotImplemented
 
 
+    def right_neighbor(self):
+        """Return the right neighbor of the quadratif form.
+
+        The right neighbor (aa, bb, cc) of an indefinite quadratic form
+        (a, b, c) is uniquely determined by the three conditions:
+        1) aa = c
+        2) b + bb % 2aa == 0 and sqrt(D) - 2|aa| < bb < sqrt(D)
+        3) bb**2 - 4*aa*cc = D
+
+        Examples: (an example in Flath, Ch. 4, Sec. 6)
+        >>> f = QuadraticForm(2, 8, 3)
+        >>> for _ in range(8):
+        ...     print(f)
+        ...     f = f.right_neighbor()
+        ...
+        2x^2+8xy+3y^2
+        3x^2+4xy-2y^2
+        -2x^2+4xy+3y^2
+        3x^2+2xy-3y^2
+        -3x^2+4xy+2y^2
+        2x^2+4xy-3y^2
+        -3x^2+2xy+3y^2
+        3x^2+4xy-2y^2
+        >>> g = QuadraticForm(1, 0, -10)
+        >>> for _ in range(5):
+        ...     print(g)
+        ...     g = g.right_neighbor()
+        ...
+        x^2-10y^2
+        -10x^2+y^2
+        x^2+6xy-y^2
+        -x^2+6xy+y^2
+        x^2+6xy-y^2
+        """
+
+        assert self.disc() > 0, "The form has to be indefinite."
+        a, b, c = self[0], self[1], self[2]
+        tau = (b + sqrt(self.disc()))/(2*c)
+        aa = c
+        # Solve b + bb = 2cd for bb s.t sqrt(self.disc()) - |2c|<bb<sqrt(...)
+        if c > 0:
+            if tau < 0: d = int(tau - 1)
+            else:       d = int(tau)
+        else:
+            if tau < 0: d = int(tau)
+            else:       d = int(tau + 1)
+        bb = 2*c*d - b
+        return QuadraticForm(aa, bb, (bb**2 - self.disc())//(4*aa))
+
     def is_primitive(self):
         return gcd.gcd(self.a,self.b,self.c) == 1
 
@@ -817,9 +866,17 @@ class QuadraticForm:
         if D < 0:
             return [f for f in QuadraticForm.almost_reduced_forms(D)
                     if f.is_reduced()]
-        else:
-            pass
-            # compute all possible reduced forms
+        else: # We need 0 < b < sqrt(D) and sqrt(D) - b < 2|a| < sqrt(D) + b
+            r = sqrt(D)
+            Lpos = [QuadraticForm(a, b, (b**2 - D)//(4*a))
+                  for b in range(1,int(r) + 1)
+                  for a in range(int((r-b)/2) + 1, int((r+b)/2) + 1)
+                  if (b**2 - D) % (4*a) == 0]
+            Lneg = [QuadraticForm(a, b, (b**2 - D)//(4*a))
+                  for b in range(1,int(r))
+                  for a in range(int((-r-b)/2), int((-r+b)/2))
+                  if (b**2 - D) % (4*a) == 0]
+            return Lpos + Lneg
 
 
     @staticmethod
@@ -834,6 +891,13 @@ class QuadraticForm:
                 if f.is_primitive()]
 
     def __repr__(self):
+        """Represent the binary quadratic form as a polynomial.
+
+        Examples:
+        >>> g = QuadraticForm(1, 0, -10); g
+        x^2-10y^2
+        """
+
         s = ""
         for t in zip([self.a,self.b,self.c],["x^2","xy","y^2"]):
             if t[0] == 0:    pass
@@ -841,7 +905,7 @@ class QuadraticForm:
             elif t[0] == -1: s += '-' + t[1]
             else:            s += '+' + str(t[0]) + t[1]
         if s[0] == '+': s = s[1:]
-        return s.replace('+-','-').replace('1','')
+        return s.replace('+-','-')
 
 if __name__ == "__main__":
     import doctest
