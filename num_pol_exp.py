@@ -1,9 +1,9 @@
 """Compute the coefficients of the numerical polynomial in the standard basis.
 
-The polynomials (x|n)=x(x-1)...(x-n+1)/n! form the standard basis for the group
-of numerical polynomials, i.e. the polynomials that take integral values at
-integers. An example of numerical polynomial is x(x+1)/2. This code computes
-the expansion of a numerical polynomial in this basis.
+The polynomials (x|n)=x(x-1)...(x-n+1)/n! form the standard basis for the
+group of numerical polynomials, i.e. the polynomials that take integral values
+at integers. An example of numerical polynomial is x(x+1)/2. This code
+computes the expansion of a numerical polynomial in this basis.
 
 -input: a0 a1 a2 ... an d, where the numerical polynomial is
 (a0 + a1*x + a2*x^2 + ... + an*x^n)/d, with an != 0.
@@ -31,7 +31,8 @@ def num_pol_exp(coeff):
     # computing the coefficients in the basis, up to the precision
     basis = []
     for n in range(len(coeff)):
-        basis.append(sum([(-1)**(n-k)*binom.binom(n,k)*f[k] for k in range(n+1)]))
+        basis.append(
+                sum([(-1)**(n-k)*binom.binom(n,k)*f[k] for k in range(n+1)]))
     return basis
 
 if __name__ == "__main__":
