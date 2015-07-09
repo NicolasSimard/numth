@@ -503,7 +503,7 @@ class QuadraticIntId:
         """Return the quadratic form corresponding to the ideal.
 
         The form corresponding to the ideal I = [a, b + c*w] is
-        N(a*x -(b + c*50w)*y)/N(I). The minus sign is there to simplify the
+        N(a*x -(b + c*w)*y)/N(I). The minus sign is there to simplify the
         bijection. This is the same as sending the corresponding form to its
         inverse under Gauss composition. By doing so, the map going from forms
         to ideals and the back to forms gives the identity right away (on the
