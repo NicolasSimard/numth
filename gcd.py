@@ -1,5 +1,5 @@
 def gcd(*num):
-    """Return the gcd of the integers.
+    """Return the gcd of arbitrarily many integers.
     
     Example:
     >>> gcd(1,2)
