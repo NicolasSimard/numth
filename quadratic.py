@@ -2,7 +2,7 @@
 
 This module defines quadratic fields (QuadraticRat class), quadratic integers
 (QuadraticOrder class), quadratic integral ideals (QuadraticIntId class) and
-quadratic forms.
+quadratic forms (QuadraticForm class).
 """
 
 import rat, gcd
