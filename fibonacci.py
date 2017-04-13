@@ -1,10 +1,25 @@
+"""This module contains functions that compute with Fibonacci numbers.
+
+One goal of this script is to experiment with the different
+algorithms to compute Fibonacci numbers. Here are the algorithms:
+
+- fibo_iter: Naive algorithm (use the formula F_n=F_{n-1}+F_{n-2},
+but save the values in a list after each call, using the @cache_calls decorator;
+- fibo_list: Return a list of the N first fibonacci numbers, using
+the naive method, _without_ saving the list after eaach call;
+- fibo_cache_list: Same as fibo_list, but save the list using the @cache_list decorator;
+- fibonacci: compute the nth Fibonacci number using the powers of quadratic elements;
+- fibo: return fibonacci(n);
+
+The algorithm which uses quadratic numbers is by far the most efficient.
+"""
+
 from cachetools import cache_calls, cache_list
 from quadratic import QuadraticOrder
 
 @cache_calls
 def fibo_iter(n):
-    """Compute the nth fibonacci number iteratively.
-    """
+    """Compute the nth fibonacci number iteratively."""
 
     if n <= 0: raise ValueError("Invalid value for Fibonacci numbers.")
     if n <= 2: return 1
@@ -17,6 +32,11 @@ def fibo_iter(n):
 
 
 def fibo_list(N, known = []):
+	"""Return a list of the n first Fibonacci numbers.
+	
+	If the the first k Fibonacci numbers are known for some k<N, the
+	list of them can be passed to the function.
+	"""
     if N <= 0: raise ValueError("Invalid value for Fibonacci numbers.")
 
     # Set initial values
@@ -39,6 +59,11 @@ def fibo_list(N, known = []):
 
 @cache_list
 def fibo_cache_list(N, known = []):
+	"""Return a list of the n first Fibonacci numbers, but save the list.
+	
+	If the the first k Fibonacci numbers are known for some k<N, the
+	list of them can be passed to the function.
+	"""
     if N <= 0: raise ValueError("Invalid value for Fibonacci numbers.")
 
     # Set initial values
@@ -61,8 +86,7 @@ def fibo_cache_list(N, known = []):
 
 
 def fibonacci(n):
-    """Compute the nth fibonacci number.
-    """
+    """Compute the nth fibonacci number."""
 
     if n <= 0:
         raise ValueError("{}: Invalid value for Fibonacci numbers.".format(n))
@@ -70,8 +94,7 @@ def fibonacci(n):
     return (phi**n).b
 
 def fibo(n):
-    """Compute the nth fibonacci number.
-    """
+    """Compute the nth fibonacci number."""
 
     return fibonacci(n)
 
