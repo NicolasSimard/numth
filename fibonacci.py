@@ -17,12 +17,13 @@ The algorithm which uses quadratic numbers is by far the most efficient.
 from cachetools import cache_calls, cache_list
 from quadratic import QuadraticOrder
 
-@cache_calls
 def fibo_iter(n):
     """Compute the nth fibonacci number iteratively."""
 
-    if n <= 0: raise ValueError("Invalid value for Fibonacci numbers.")
-    if n <= 2: return 1
+    if n <= 0:
+        raise ValueError("Invalid value for Fibonacci numbers.")
+    if n <= 2:
+        return 1
     a, b = 1, 1
     for _ in range(n - 2):
         c = a + b
@@ -32,12 +33,13 @@ def fibo_iter(n):
 
 
 def fibo_list(N, known = []):
-	"""Return a list of the n first Fibonacci numbers.
-	
-	If the the first k Fibonacci numbers are known for some k<N, the
-	list of them can be passed to the function.
-	"""
-    if N <= 0: raise ValueError("Invalid value for Fibonacci numbers.")
+    """Return a list of the n first Fibonacci numbers.
+    
+    If the the first k Fibonacci numbers are known for some k<N, the
+    list of them can be passed to the function."""
+    
+    if N<=0:
+        raise ValueError("Invalid value for Fibonacci numbers.")
 
     # Set initial values
     initial_val = [1, 1]
@@ -59,12 +61,13 @@ def fibo_list(N, known = []):
 
 @cache_list
 def fibo_cache_list(N, known = []):
-	"""Return a list of the n first Fibonacci numbers, but save the list.
-	
-	If the the first k Fibonacci numbers are known for some k<N, the
-	list of them can be passed to the function.
-	"""
-    if N <= 0: raise ValueError("Invalid value for Fibonacci numbers.")
+    """Return a list of the n first Fibonacci numbers, but save the list.
+    
+    If the the first k Fibonacci numbers are known for some k<N, the
+    list of them can be passed to the function.
+    """
+    if N <= 0:
+        raise ValueError("Invalid value for Fibonacci numbers.")
 
     # Set initial values
     initial_val = [1, 1]
@@ -112,3 +115,6 @@ if __name__ == "__main__":
     L2 = fibo_cache_list(N)
     print("With cache: {}".format(time() - start))
     print("The length of the list are: {} and {}".format(len(L1),len(L2)))
+
+    
+    
